@@ -46,12 +46,21 @@ python baidu_crawler.py
 
 
 ### 2017/6/13更新
-<<<<<<< HEAD
  * 新增抓取的代理IP数据存到MySql中 下次先从库中读取 再从网站抓取.
-=======
- * 新增抓取的代理IP数据存到MySql中 下次先从库中读取 再从网站抓取
 
 ### 2017/6/18更新
  * 修改了部分[BoBoGithub](https://github.com/BoBoGithub)提交的PR，并重构了[ip_pool.py](https://github.com/fancoo/BaiduCrawler/blob/master/ip_pool.py)的代码。
  * 目前这个版本其实只将有效ip保存到数据库，没能实现ip质量评优以及爬取的多线程，因时间精力有限，考虑未来再加入。
->>>>>>> 63699a8e0f784db5453449f86db3824e9878a893
+
+### 2017/7/5更新
+ * 新增代理ip质量排序机制 FROM:[fancoo/Proxy](https://github.com/fancoo/Proxy)
+ ```bash
+
+	bobo@migang:BaiduCrawler$ python assess_quality.py
+
+	Database test succeed: 175.155.24.47:808	0.0482609272003
+	Database test succeed: 61.145.159.77:8118	0.0384390354156
+	Database test succeed: 222.94.151.114:808	0.0398299694061
+	Database test succeed: 112.86.10.135:8118	0.0394310951233
+
+ ```
