@@ -29,3 +29,15 @@ TABLE_NAME = 'valid_ip'
 
 # 数据库字符
 charset = 'utf8'
+
+# 1个代理ip最大容忍失败次数，超过则从db中删去。
+USELESS_TIME = 4
+
+# 1个代理ip最小容忍成功率
+SUCCESS_RATE = 0.8
+
+# 超时惩罚时间
+TIME_OUT_PENALTY = 10
+
+# 每隔多久检测一次
+CHECK_TIME_INTERVAL = 24*3600
