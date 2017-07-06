@@ -4,6 +4,7 @@ import requests
 from lxml import etree
 import random
 import ip_pool
+import threading
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
@@ -14,6 +15,11 @@ sys.setdefaultencoding('utf-8')
 ================================================
 """
 
+# 全局变量定义
+keywords	= []
+threadPool	= []
+queueArr	= []
+useful_proxies	= {}
 
 def download_html(keywords, proxy):
     """
@@ -64,50 +70,111 @@ def html_parser(html):
     # 返回结果
     return text_str
 
+# 设置字典数据
+def dealKeywordDict(key, word):
+    global queueArr
 
-def extract_all_text(keyword_dict, keyword_text, ip_factory):
+    queueArr[key].append(word)
+
+
+def extract_all_text(keyword_dict, keyword_text, ip_factory, threadNum):
     """
     存储结果
     """
-    useful_proxies = {}
+    global keywords
+    global threadPool
+    global queueArr
+    global useful_proxies
+
+    #useful_proxies = {}
     max_failure_times = 3
     try:
         # 获取代理IP数据
         for ip in ip_factory.get_proxies():
             useful_proxies[ip] = 0
+
         print "总共：" + str(len(useful_proxies)) + 'IP可用'
+
     except OSError:
         print "获取代理ip时出错！"
 
+    # 提取抓取的关键词
     cn = open(keyword_dict, 'r')
-    with open(keyword_text, 'w') as ct:
-        # 逐行读取关键词
-        for line in cn:
-            # 设置随机代理
-            proxy = random.choice(useful_proxies.keys())
-            print "change proxies: " + proxy
+    for line in cn:
+        keywords.append(line.strip())
+    cn.close()
 
-            content = ''
-            try:
-                content = download_html(line.strip(), proxy)
-            except OSError:
-                # 超过3次则删除此proxy
-                useful_proxies[proxy] += 1
-                if useful_proxies[proxy] > 3:
-                    useful_proxies.remove(proxy)
-                # 再抓一次
-                proxy = random.choice(useful_proxies.keys())
-                content = download_html(line.strip(), proxy)
+    # 初始化线程字典数组
+    for i in range(threadNum):
+	queueArr.append([])
+    
+    # 提取关键词到线程字典数组
+    nums      = 0
+    for char in keywords:
+	dealKeywordDict(nums % threadNum, char)
+	nums += 1
 
-            raw_text = html_parser(content)
-            raw_text = raw_text.replace('\n', '||')
-            print raw_text
+    # 启动多个下载
+    for i in range(threadNum):
+	threadRet = startDownload(i)
 
-            # 写入数据到文件
-            ct.write(line.strip()+':\t'+raw_text+'\n')
+    # 结束开启的线程
+    for thread in threadPool:
+	thread.join(30)
 
-        ct.close()
-        cn.close()
+def startDownload(i):
+	global threadPool
+
+        # 实例化 抓取数据线程
+	dataThread = GetDataThread(i)
+
+        # 追加进线程池数组
+	threadPool.append(dataThread)
+
+        # 启动线程
+	dataThread.start()
+
+
+class GetDataThread(threading.Thread):
+	def __init__(self, i):
+		threading.Thread.__init__(self)
+		self.i	= i
+
+	def run(self):
+		global queueArr
+		global useful_proxies
+
+		# 保存抓取结果文件
+		keyword_text = 'data/results.txt'
+
+    		with open(keyword_text, 'w') as ct:
+	       		# 逐行读取关键词
+        		for word in queueArr[self.i]:
+			
+           	 		# 设置随机代理
+            			proxy = random.choice(useful_proxies.keys())
+            			print "change proxies: " + proxy
+
+            			content = ''
+            			try:
+               				content = download_html(word.strip(), proxy)
+            			except OSError:
+               				# 超过3次则删除此proxy
+               				useful_proxies[proxy] += 1
+               				if useful_proxies[proxy] > 3:
+               					useful_proxies.remove(proxy)
+               				# 再抓一次
+                			proxy = random.choice(useful_proxies.keys())
+                			content = download_html(word.strip(), proxy)
+
+            			raw_text = html_parser(content)
+            			raw_text = raw_text.replace('\n', '||')
+            			print raw_text
+
+            			# 写入数据到文件
+            			ct.write(word.strip()+':\t'+raw_text+'\n')
+
+        		ct.close()
 
 
 def main():
@@ -116,8 +183,11 @@ def main():
     # 抓取存取结果
     keyword_text = 'data/results.txt'
 
+    # 启动线个数
+    threadNum	= 5
+
     # 抓取数据
-    extract_all_text(keyword_dict, keyword_text, ip_pool.ip_factory)
+    extract_all_text(keyword_dict, keyword_text, ip_pool.ip_factory, threadNum)
 
 if __name__ == '__main__':
     main()
